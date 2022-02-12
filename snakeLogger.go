@@ -1,4 +1,4 @@
-package snakeLogger
+package snakeLoggerFile
 
 import (
 	"errors"
