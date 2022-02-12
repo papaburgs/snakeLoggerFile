@@ -1,3 +1,3 @@
-module github.com/papaburgs/snakeLogger-file
+module github.com/papaburgs/snakeLoggerFile
 
 go 1.16
