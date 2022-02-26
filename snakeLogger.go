@@ -100,6 +100,7 @@ func (s *SnakeLogger) parseLog(level SnakeLoggerLevel, msg string, t time.Time) 
 		thisLog.ID = ""
 	}
 	writeChan <- thisLog
+	writeJSONChan <- thisLog
 
 }
 
