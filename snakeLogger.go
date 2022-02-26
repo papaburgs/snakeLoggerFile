@@ -185,6 +185,7 @@ func writeJSONToFile(c chan LogData) {
 			fmt.Println(err)
 			break
 		}
+		jsoncontent = append(jsoncontent, '\n')
 
 		f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
