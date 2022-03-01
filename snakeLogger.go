@@ -210,7 +210,7 @@ func writeToFile(c chan LogData) {
 		fmt.Println("cannot get home dir, sending to tmp")
 		dir = "/tmp"
 	}
-	basedir = dir + "/battlesnakeLogs/"
+	basedir = dir + "/battlesnakeLogs"
 	err = os.Mkdir(basedir, 0755)
 	if err != nil {
 		if !errors.Is(err, os.ErrExist) {
@@ -222,7 +222,7 @@ func writeToFile(c chan LogData) {
 		if m.SnakeName == "" {
 			filename = basedir + "generic.log"
 		} else {
-			filename = fmt.Sprintf("%s.log", basedir, m.SnakeName)
+			filename = fmt.Sprintf("%s/%s.log", basedir, m.SnakeName)
 		}
 		f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
