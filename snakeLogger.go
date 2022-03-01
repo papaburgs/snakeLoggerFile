@@ -126,10 +126,22 @@ func (s *SnakeLogger) Infof(format string, v ...interface{}) {
 	go s.parseLog(InfoLevel, msg, now)
 }
 
+func (s *SnakeLogger) Warnf(format string, v ...interface{}) {
+	now := time.Now()
+	msg := fmt.Sprintf(format, v...)
+	go s.parseLog(WarnLevel, msg, now)
+}
+
 func (s *SnakeLogger) Errorf(format string, v ...interface{}) {
 	now := time.Now()
 	msg := fmt.Sprintf(format, v...)
 	go s.parseLog(ErrorLevel, msg, now)
+}
+
+func (s *SnakeLogger) Reportf(format string, v ...interface{}) {
+	now := time.Now()
+	msg := fmt.Sprintf(format, v...)
+	go s.parseLog(ReportLevel, msg, now)
 }
 
 func (s *SnakeLogger) Debug(m string) {
@@ -142,9 +154,19 @@ func (s *SnakeLogger) Info(m string) {
 	go s.parseLog(InfoLevel, m, now)
 }
 
+func (s *SnakeLogger) Warn(m string) {
+	now := time.Now()
+	go s.parseLog(WarnLevel, m, now)
+}
+
 func (s *SnakeLogger) Error(m string) {
 	now := time.Now()
 	go s.parseLog(ErrorLevel, m, now)
+}
+
+func (s *SnakeLogger) Report(m string) {
+	now := time.Now()
+	go s.parseLog(ReportLevel, m, now)
 }
 
 //NewLogger returns a new copy of the local logger
