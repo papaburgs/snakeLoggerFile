@@ -76,6 +76,10 @@ func (s *SnakeLogger) ResetFunc() {
 	s.currentFunc = ""
 }
 
+func (s *SnakeLogger) GetFunc() string {
+	return s.currentFunc
+}
+
 func (s *SnakeLogger) UpdateTurn(t int) {
 	s.currentTurn = t
 }
@@ -243,7 +247,7 @@ func writeToFile(c chan LogData) {
 
 // String returns a nice clean string for the log
 func (l LogData) String() string {
-	res := fmt.Sprintf("%s %s (%v) <%s> [%s] %s \n", l.Timestamp, l.ID, l.Turn, l.Function, l.Sev, l.Msg)
+	res := fmt.Sprintf("%s %s (%v) <%s> [%s] %s\n", l.Timestamp, l.ID, l.Turn, l.Function, l.Sev, l.Msg)
 	return res
 }
 
