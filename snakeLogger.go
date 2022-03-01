@@ -1,7 +1,6 @@
 package snakeLoggerFile
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -11,24 +10,32 @@ import (
 )
 
 var writeChan chan LogData
-var writeJSONChan chan LogData
 
+// SnakeLoggerLevel defines the levels
 type SnakeLoggerLevel uint8
 
 const (
+	// DebugLevel tracks minor steps in code
 	DebugLevel SnakeLoggerLevel = iota
+	// InfoLevel tracks major steps in code
 	InfoLevel
+	// WarnLevel for things that should not be happening, but we can recover
 	WarnLevel
+	// ErrorLevel are major issues that are breaking functionality
 	ErrorLevel
+	// ReportLevel for logs that go to splunk for reports
+	ReportLevel
+	// NullLevel is for null loggers for testing
 	NullLevel
 )
 
 var levelMap = map[SnakeLoggerLevel]string{
-	DebugLevel: "debug",
-	InfoLevel:  "info",
-	WarnLevel:  "warn",
-	ErrorLevel: "error",
-	NullLevel:  "null",
+	DebugLevel:  "debug",
+	InfoLevel:   "info",
+	WarnLevel:   "warn",
+	ErrorLevel:  "error",
+	NullLevel:   "null",
+	ReportLevel: "report",
 }
 
 // LogData is the format for a log
@@ -40,15 +47,17 @@ type LogData struct {
 	UnixTimeStamp int64
 	Turn          int
 	Function      string
+	SnakeName     string
 }
 
-// Logger is a type that can be shared in a package
+// SnakeLogger is a custom logger for tracking battlesnakes
 type SnakeLogger struct {
 	level       SnakeLoggerLevel
 	isNull      bool
 	id          string
 	currentFunc string
 	currentTurn int
+	name        string
 }
 
 func (s *SnakeLogger) updateLogLevel(l SnakeLoggerLevel) {
@@ -91,6 +100,7 @@ func (s *SnakeLogger) parseLog(level SnakeLoggerLevel, msg string, t time.Time) 
 		Sev:           levelMap[level],
 		Turn:          s.currentTurn,
 		Function:      s.currentFunc,
+		SnakeName:     s.name,
 	}
 
 	// add in ability to write to generic log from anywhere
@@ -100,7 +110,6 @@ func (s *SnakeLogger) parseLog(level SnakeLoggerLevel, msg string, t time.Time) 
 		thisLog.ID = ""
 	}
 	writeChan <- thisLog
-	writeJSONChan <- thisLog
 
 }
 
@@ -154,59 +163,17 @@ func NewLogger(level string, index uint64) *SnakeLogger {
 	return &s
 }
 
-// writeJSONToFile listens on a channel for log data and writes it to a file
-func writeJSONToFile(c chan LogData) {
-	// make sure path is setup
-	// find home directory, since I am running this on similar linux systems, this should be all we need
-	var (
-		dir      string
-		basedir  string
-		filename string
-		err      error
-	)
-	dir = os.Getenv("HOME")
-	if dir == "" {
-		fmt.Println("cannot get home dir, sending to tmp")
-		dir = "/tmp"
-	}
-	basedir = dir + "/battlesnakeJSON"
-	filename = basedir + "/battlesnake.json"
-	err = os.Mkdir(basedir, 0755)
-	if err != nil {
-		if !errors.Is(err, os.ErrExist) {
-			fmt.Println("I don't understand this error: ", err)
-		}
-	}
-
-	for m := range c {
-		var jsoncontent []byte
-		jsoncontent, err = json.Marshal(m)
-		if err != nil {
-			fmt.Println(err)
-			break
-		}
-
-		f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			fmt.Println(err)
-			break
-
-		}
-		if _, err := f.Write(jsoncontent); err != nil {
-			fmt.Println(err)
-			break
-		}
-		cerr := f.Close()
-		if cerr != nil {
-			fmt.Println(cerr)
-		}
-
-	}
+func (s *SnakeLogger) UpdateName(n string) {
+	s.name = n
 }
 
 // writeChan listens on a channel for log data and writes it to a file
 // this is the only place that should listen to a channel and writes to files, so it should
 // be thread safe
+// filename is based on supplied snake name (on the logger)
+// this way each snake has its own file
+// this is different than how it was working before (one file per game)
+// since this will be read by splunk, we don't need new files
 func writeToFile(c chan LogData) {
 	// make sure path is setup
 	// find home directory, since I am running this on similar linux systems, this should be all we need
@@ -221,7 +188,7 @@ func writeToFile(c chan LogData) {
 		fmt.Println("cannot get home dir, sending to tmp")
 		dir = "/tmp"
 	}
-	basedir = dir + "/battlesnakeLogs"
+	basedir = dir + "/battlesnakeLogs/"
 	err = os.Mkdir(basedir, 0755)
 	if err != nil {
 		if !errors.Is(err, os.ErrExist) {
@@ -230,10 +197,10 @@ func writeToFile(c chan LogData) {
 	}
 
 	for m := range c {
-		if m.ID == "" {
-			filename = basedir + "/generic.log"
+		if m.SnakeName == "" {
+			filename = basedir + "generic.log"
 		} else {
-			filename = basedir + "/game-" + m.ID + ".log"
+			filename = fmt.Sprintf("%s.log", basedir, m.SnakeName)
 		}
 		f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -254,14 +221,7 @@ func writeToFile(c chan LogData) {
 
 // String returns a nice clean string for the log
 func (l LogData) String() string {
-	//res := l.Time + " [" + l.Sev + "] " + l.Msg + "\n"
-	res := fmt.Sprintf("%v [%s] %s \n", l.UnixTimeStamp, l.Sev, l.Msg)
-	return res
-}
-
-// StringWithID returns a nice clean string with ID
-func (l LogData) StringWithID() string {
-	res := fmt.Sprintf("%v [%s] %s %s \n", l.UnixTimeStamp, l.Sev, l.ID, l.Msg)
+	res := fmt.Sprintf("%s %s (%v) <%s> [%s] %s \n", l.Timestamp, l.ID, l.Turn, l.Function, l.Sev, l.Msg)
 	return res
 }
 
@@ -272,8 +232,6 @@ func (l LogData) Bytes() []byte {
 
 func init() {
 	writeChan = make(chan LogData)
-	writeJSONChan = make(chan LogData)
 	go writeToFile(writeChan)
-	go writeJSONToFile(writeJSONChan)
 
 }
