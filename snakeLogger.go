@@ -220,7 +220,7 @@ func writeToFile(c chan LogData) {
 
 	for m := range c {
 		if m.SnakeName == "" {
-			filename = basedir + "generic.log"
+			filename = basedir + "/generic.log"
 		} else {
 			filename = fmt.Sprintf("%s/%s.log", basedir, m.SnakeName)
 		}
