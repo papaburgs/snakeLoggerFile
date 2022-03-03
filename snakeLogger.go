@@ -170,7 +170,7 @@ func (s *SnakeLogger) Report(m string) {
 }
 
 //NewLogger returns a new copy of the local logger
-func NewLogger(level string, index uint64) *SnakeLogger {
+func NewLogger(level string) *SnakeLogger {
 
 	s := SnakeLogger{
 		level: InfoLevel,
