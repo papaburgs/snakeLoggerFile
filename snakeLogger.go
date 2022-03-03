@@ -76,6 +76,10 @@ func (s *SnakeLogger) ResetFunc() {
 	s.currentFunc = ""
 }
 
+func (s *SnakeLogger) GetFunc() string {
+	return s.currentFunc
+}
+
 func (s *SnakeLogger) UpdateTurn(t int) {
 	s.currentTurn = t
 }
@@ -210,7 +214,7 @@ func writeToFile(c chan LogData) {
 		fmt.Println("cannot get home dir, sending to tmp")
 		dir = "/tmp"
 	}
-	basedir = dir + "/battlesnakeLogs/"
+	basedir = dir + "/battlesnakeLogs"
 	err = os.Mkdir(basedir, 0755)
 	if err != nil {
 		if !errors.Is(err, os.ErrExist) {
@@ -220,9 +224,9 @@ func writeToFile(c chan LogData) {
 
 	for m := range c {
 		if m.SnakeName == "" {
-			filename = basedir + "generic.log"
+			filename = basedir + "/generic.log"
 		} else {
-			filename = fmt.Sprintf("%s.log", basedir, m.SnakeName)
+			filename = fmt.Sprintf("%s/%s.log", basedir, m.SnakeName)
 		}
 		f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -243,7 +247,7 @@ func writeToFile(c chan LogData) {
 
 // String returns a nice clean string for the log
 func (l LogData) String() string {
-	res := fmt.Sprintf("%s %s (%v) <%s> [%s] %s \n", l.Timestamp, l.ID, l.Turn, l.Function, l.Sev, l.Msg)
+	res := fmt.Sprintf("%s %s (%v) <%s> [%s] %s\n", l.Timestamp, l.ID, l.Turn, l.Function, l.Sev, l.Msg)
 	return res
 }
 
